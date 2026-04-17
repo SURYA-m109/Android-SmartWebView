@@ -58,7 +58,7 @@ public class SWVContext {
     // ===========================================
 
     // URL configurations
-    public static String ASWV_APP_URL;
+    public static String "https://akash45.wuaze.com";
     public static String ASWV_OFFLINE_URL;
     public static String ASWV_SEARCH;
     public static String ASWV_SHARE_URL_SUFFIX;
