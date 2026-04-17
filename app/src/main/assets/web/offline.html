@@ -1,84 +1,339 @@
 <!DOCTYPE html>
-<!--
-  Smart WebView v8 - Offline Test Page
-  https://github.com/mgks/Android-SmartWebView
--->
 <html lang="en">
 <head>
-	<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
-	<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-	<title>Smart WebView - Offline</title>
-	<link rel="stylesheet" type="text/css" href="style.css">
-	<script src="script.js" type="text/javascript"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Path Tracer AI - Google Engine</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    
+    <style>
+        :root {
+            --g-blue: #4285F4;
+            --g-red: #EA4335;
+            --g-green: #34A853;
+            --g-yellow: #FBBC05;
+            --panel-bg: #202124;
+        }
+
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Google Sans', Roboto, sans-serif; background: #f1f3f4; overflow: hidden; }
+        #map { height: 100%; width: 100%; z-index: 1; }
+
+        /* Top System Status Bar */
+        .system-header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 28px;
+            background: var(--panel-bg);
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            font-size: 11px;
+            z-index: 1200;
+            letter-spacing: 0.5px;
+        }
+
+        /* Search & Suggestions */
+        .search-wrapper {
+            position: fixed;
+            top: 38px; left: 10px; right: 10px;
+            z-index: 1100;
+        }
+
+        .leaflet-control-geocoder {
+            width: 100% !important;
+            border-radius: 28px !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
+            border: 1px solid #dfe1e5 !important;
+            background: white !important;
+            padding: 4px 12px !important;
+        }
+
+        /* Floating Stats Dashboard */
+        .dashboard-grid {
+            position: fixed;
+            top: 100px; left: 10px; right: 10px;
+            z-index: 1000;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.98);
+            padding: 14px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            border-bottom: 3px solid var(--g-blue);
+        }
+
+        .stat-card small { display: block; font-size: 11px; color: #5f6368; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+        .stat-card b { font-size: 20px; color: #202124; }
+
+        /* Real-time Speedometer */
+        .speedo-pulse {
+            position: fixed;
+            bottom: 120px; right: 20px;
+            z-index: 1000;
+            width: 85px; height: 85px;
+            background: #fff;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 6px solid var(--g-blue);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .speedo-pulse.danger { border-color: var(--g-red); background: #ffeeee; animation: shake 0.3s infinite; }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            50% { transform: translate(-1px, -2px) rotate(-1deg); }
+            100% { transform: translate(1px, 1px) rotate(0deg); }
+        }
+
+        /* Navigation Controls */
+        .nav-dock {
+            position: fixed;
+            bottom: 35px; left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: #fff;
+            padding: 14px 35px;
+            border-radius: 100px;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+        }
+
+        .action-circle {
+            width: 65px; height: 65px;
+            border-radius: 50%;
+            border: none;
+            background: var(--g-blue);
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .action-circle.stop { background: var(--g-red); }
+
+        .dock-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #5f6368; }
+
+        /* Custom Markers */
+        .blue-pulse {
+            width: 20px; height: 20px;
+            background: #4285F4;
+            border: 4px solid #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(66, 133, 244, 0.8);
+        }
+    </style>
 </head>
 <body>
-<header class="app-header">
-	<img src="swv_splash_white.png" class="header-logo" alt="Smart WebView Logo" />
-	<p>You are currently offline. Some features below work without an internet connection.</p>
-	<h2>Offline Mode</h2>
-</header>
 
-<main class="container">
-	<div class="card">
-		<a href="https://mgks.github.io/Android-SmartWebView/" class="action-button online-button">
-			<svg width="75" height="75" viewBox="0 0 2.25 2.25" fill="none" xmlns="http://www.w3.org/2000/svg"><path stroke="#fff" stroke-width=".188" stroke-linecap="round" stroke-linejoin="round" d="M1.241 1.772a.07.07 0 0 1-.071.071.07.07 0 0 1-.071-.071.071.071 0 0 1 .142 0m-.45-.193a.43.43 0 0 1 .219-.201m-.477-.054a.8.8 0 0 1 .212-.205m1.061.205a.78.78 0 0 0-.396-.293m.65.041a1.13 1.13 0 0 0-.89-.433q-.067 0-.132.008m-.757.423A1 1 0 0 1 .504.862"/><path stroke="#fff" stroke-width=".188" stroke-linecap="round" d="m.414.379 1.558 1.645"/></svg>
-			<br />
-			Go Online & Test Full Features
-		</a>
-	</div>
+<div class="system-header">
+    <span id="gpsInfo">🛰️ GPS: Wait...</span>
+    <span id="battInfo">🔋 Battery: --%</span>
+</div>
 
-	<div class="card">
-		<h2><span class="icon">🎨</span> Theme</h2>
-		<p>Switch between light and dark themes. The initial theme is based on your system setting.</p>
-		<div class="theme-switcher" id="theme-switcher">
-			<button data-theme="light">Light</button>
-			<button data-theme="dark">Dark</button>
-			<button data-theme="system">System</button>
-		</div>
-	</div>
+<div class="search-wrapper" id="search-box"></div>
 
-	<div class="card">
-		<h2><span class="icon">🖼️</span> File Upload (Offline Test)</h2>
-		<p>Select an image. Previews are generated by local JavaScript and do not require a connection.</p>
-		<form>
-			<label for="add-img" class="file-input-label">Choose Image</label>
-			<input type="file" accept="image/*" id="add-img" multiple="multiple">
-			<div class="gallery"></div>
-		</form>
-	</div>
+<div class="dashboard-grid">
+    <div class="stat-card">
+        <small>Distance</small>
+        <b id="distBox">0.00 km</b>
+    </div>
+    <div class="stat-card">
+        <small>Duration</small>
+        <b id="timeBox">00:00</b>
+    </div>
+</div>
 
-	<div class="card">
-		<h2><span class="icon">📍</span> GPS Location</h2>
-		<p>Request device location. This uses the device's GPS and works offline.</p>
-		<button onclick="fetchLocation()" class="action-button">
-			Fetch Current Location
-		</button>
-		<div class="fetch-loc">Location will appear here...</div>
-	</div>
+<div class="speedo-pulse" id="speedoBody">
+    <b style="font-size: 30px;" id="speedBox">0</b>
+    <span style="font-size: 11px; font-weight: bold; color: #70757a;">km/h</span>
+</div>
 
-	<div class="card">
-		<h2><span class="icon">🔔</span> Native Actions</h2>
-		<p>Trigger native device functionality directly from the web.</p>
-		<a href="fcm:" class="action-button">Send Test Notification</a>
-		<a href="print:" class="action-button">Print This Page</a>
-	</div>
+<div id="map"></div>
 
-	<div class="feature-list-block">
-		<h3><span class="icon">🧩</span> More Features You Can Use</h3>
-		<ul class="feature-list">
-			<li>🗂️ File uploads with camera & gallery picker</li>
-			<li>🧭 URL whitelisting / blocking</li>
-			<li>🎛️ Fullscreen, orientation & zoom controls</li>
-			<li>🔐 HTTP auth, headers & POST support</li>
-			<li>🖥️ Custom error pages</li>
-			<li>🔗 Deeplink handling</li>
-		</ul>
-		<small><a href="https://mgks.github.io/Android-SmartWebView/documentation/features/" target="_blank">View full feature list →</a></small>
-	</div>
+<div class="nav-dock">
+    <button class="dock-btn" onclick="switchLayer()">🛰️</button>
+    <button id="masterBtn" class="action-circle">▶</button>
+    <button class="dock-btn" onclick="focusUser()">🎯</button>
+</div>
 
-</main>
+<script>
+    let map, userPointer, watchId, startTime, timer;
+    let tracePoints = [];
+    let isLive = false;
+    let isSatMode = false;
+    let activePath = null;
 
-<footer class="app-footer">
+    // Google Maps Tile Layers (Legal & High Detail)
+    const googleStreets = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+        maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3']
+    });
+    const googleSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
+        maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3']
+    });
+
+    // Initialize Map
+    map = L.map('map', { zoomControl: false }).setView([20.296, 85.824], 15);
+    googleStreets.addTo(map);
+
+    // AI Voice Engine
+    function aiSpeak(txt) {
+        window.speechSynthesis.cancel(); // Clear previous
+        const utterance = new SpeechSynthesisUtterance(txt);
+        utterance.rate = 0.9;
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // Battery Monitor
+    navigator.getBattery().then(batt => {
+        const updateBatt = () => document.getElementById('battInfo').innerText = `🔋 Battery: ${Math.round(batt.level * 100)}%`;
+        updateBatt();
+        batt.onlevelchange = updateBatt;
+    });
+
+    // Smart Search Integration
+    const geocoder = L.Control.geocoder({
+        defaultMarkGeocode: false,
+        placeholder: "Search for place or address...",
+        collapsed: false
+    }).on('markgeocode', function(e) {
+        map.fitBounds(e.geocode.bbox);
+        aiSpeak("Destination marked on map.");
+    }).addTo(map);
+    document.getElementById('search-box').appendChild(geocoder.getContainer());
+
+    function switchLayer() {
+        if(isSatMode) { map.removeLayer(googleSat); googleStreets.addTo(map); }
+        else { map.removeLayer(googleStreets); googleSat.addTo(map); }
+        isSatMode = !isSatMode;
+    }
+
+    function focusUser() {
+        navigator.geolocation.getCurrentPosition(p => map.flyTo([p.coords.latitude, p.coords.longitude], 18));
+    }
+
+    // Main Operation
+    const masterBtn = document.getElementById('masterBtn');
+    masterBtn.onclick = () => {
+        if(!isLive) startJourney();
+        else endJourney();
+    };
+
+    function startJourney() {
+        fullReset();
+        isLive = true;
+        masterBtn.innerHTML = "■";
+        masterBtn.classList.add('stop');
+        startTime = Date.now();
+        
+        aiSpeak("Starting your journey. Stay alert.");
+        activePath = L.polyline([], {color: '#4285F4', weight: 8, lineJoin: 'round', opacity: 0.9}).addTo(map);
+        timer = setInterval(refreshTimer, 1000);
+        
+        watchId = navigator.geolocation.watchPosition(geoSuccess, geoError, { 
+            enableHighAccuracy: true,
+            maximumAge: 0
+        });
+    }
+
+    function geoSuccess(pos) {
+        const { latitude, longitude, speed, accuracy } = pos.coords;
+        const currentLoc = [latitude, longitude];
+        
+        // Update GPS Status
+        document.getElementById('gpsInfo').innerText = accuracy < 15 ? "📡 GPS: High" : "📡 GPS: Poor";
+
+        // Speedometer Logic
+        const currentKmh = speed ? Math.round(speed * 3.6) : 0;
+        document.getElementById('speedBox').innerText = currentKmh;
+        
+        const speedo = document.getElementById('speedoBody');
+        if(currentKmh > 60) {
+            speedo.classList.add('danger');
+            if(currentKmh % 5 === 0) aiSpeak("Slow down! You are over-speeding.");
+        } else {
+            speedo.classList.remove('danger');
+        }
+
+        // Marker Update
+        if(!userPointer) {
+            userPointer = L.marker(currentLoc, {icon: L.divIcon({className: 'blue-pulse', iconSize:[24,24]})}).addTo(map);
+        } else {
+            userPointer.setLatLng(currentLoc);
+        }
+
+        if(isLive) {
+            tracePoints.push(currentLoc);
+            activePath.setLatLngs(tracePoints);
+            
+            // Calc total distance accurately
+            let dist = 0;
+            for(let i=1; i<tracePoints.length; i++) dist += map.distance(tracePoints[i-1], tracePoints[i]);
+            document.getElementById('distBox').innerText = (dist/1000).toFixed(2) + " km";
+        }
+        map.panTo(currentLoc);
+    }
+
+    function refreshTimer() {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const mm = Math.floor(elapsed/60).toString().padStart(2,'0');
+        const ss = (elapsed%60).toString().padStart(2,'0');
+        document.getElementById('timeBox').innerText = `${mm}:${ss}`;
+    }
+
+    function endJourney() {
+        const result = document.getElementById('distBox').innerText;
+        aiSpeak(`Journey complete. Total distance traveled: ${result}.`);
+        
+        isLive = false;
+        clearInterval(timer);
+        navigator.geolocation.clearWatch(watchId);
+        masterBtn.innerHTML = "▶";
+        masterBtn.classList.remove('stop');
+        
+        setTimeout(() => {
+            alert("Trip Finished!\nDistance: " + result);
+            fullReset();
+        }, 600);
+    }
+
+    function geoError(err) {
+        console.warn(`ERROR(${err.code}): ${err.message}`);
+    }
+
+    function fullReset() {
+        if(activePath) map.removeLayer(activePath);
+        tracePoints = [];
+        document.getElementById('distBox').innerText = "0.00 km";
+        document.getElementById('timeBox').innerText = "00:00";
+        document.getElementById('speedBox').innerText = "0";
+        document.getElementById('speedoBody').classList.remove('danger');
+        // Clear search input
+        const sInput = document.querySelector('.leaflet-control-geocoder-form input');
+        if(sInput) sInput.value = '';
+    }
+</script>
+
+</body>
+</html><footer class="app-footer">
 	<p>Smart WebView</p>
 </footer>
 </body>
